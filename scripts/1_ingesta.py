@@ -116,28 +116,6 @@ try:
 except Exception as e:
     print(f"Error con BRFSS: {e}")
 
-# --- OpenFoodFacts ---
-openfood_url = "https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz"
-try:
-    print("\nDescargando OpenFoodFacts...")
-    resp = requests.get(openfood_url)
-    resp.raise_for_status()
-    path_gz = "data_csv/openfoodfacts.csv.gz"
-    path_csv = "data_csv/openfoodfacts.csv"
-    with open(path_gz, "wb") as f:
-        f.write(resp.content)
-    # Descomprimir .gz
-    with gzip.open(path_gz, "rb") as f_in:
-        with open(path_csv, "wb") as f_out:
-            f_out.write(f_in.read())
-    # Leer CSV tolerante a errores
-    df_off = pd.read_csv(path_csv, on_bad_lines="skip", encoding="utf-8", low_memory=False)
-    df_off.to_sql("OpenFoodFacts", conn, if_exists="replace", index=False)
-    print(f"'OpenFoodFacts' guardado: {df_off.shape[0]} filas × {df_off.shape[1]} columnas")
-except Exception as e:
-    print(f"Error con OpenFoodFacts: {e}")
-
-
 # --- FoodData Central ---
 fdc_url = "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_foundation_food_csv_2025-04-24.zip"
 try:
@@ -180,4 +158,4 @@ except Exception as e:
 
 # --- Cerrar SQLite ---
 conn.close()
-print("\n🎉 ¡Todos los datasets guardados en 'pipeline.db'!")
+print("\n ¡Todos los datasets guardados en 'pipeline.db'!")
