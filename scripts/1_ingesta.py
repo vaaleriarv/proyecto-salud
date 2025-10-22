@@ -67,13 +67,37 @@ try:
     print("\n📥 Descargando BRFSS 2024...")
     resp = requests.get(brfss_url)
     resp.raise_for_status()
+
     with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
         print("Archivos en ZIP:", z.namelist())
         xpt_files = [f for f in z.namelist() if ".xpt" in f.lower()]
+
+        if not xpt_files:
+            raise Exception("No se encontró archivo .xpt en el ZIP")
+
         with z.open(xpt_files[0]) as f:
+            # Leer el archivo .xpt
             df_brfss = pd.read_sas(f, format="xport")
+
+            # Definir las columnas que te interesan
+            columnas_relevantes = [
+                '_STATE', 'MARITAL', '_CHLDCNT', '_INCOMG1', '_AGE_G', '_SEX', '_RACE',
+                '_URBSTAT', '_METSTAT', '_EDUCAG', 'MEDCOST1', 'CHECKUP1', '_HLTHPL2',
+                'PDIABTS1', 'DIABETE4', 'DIABAGE4', 'DIABTYPE', 'PREDIAB2', 'EXERANY2',
+                '_TOTINDA', 'WEIGHT2', 'WTKG3', 'HEIGHT3', '_BMI5', '_BMI5CAT', '_RFBMI5',
+                'SMOKDAY2', 'LCSFIRST', 'LCSNUMCG', '_SMOKER3', 'LCSLAST_', 'LCSNUMC_',
+                '_LCSSMKG', '_LCSYSMK', 'ALCDAY4', 'AVEDRNK4', 'DRNK3GE5', '_DRNKWK3',
+                '_RFDRHV9', 'MARIJAN1', 'SSBFRUT3'
+            ]
+
+            # Filtrar solo las columnas que existan en el dataset
+            columnas_existentes = [c for c in columnas_relevantes if c in df_brfss.columns]
+            df_brfss = df_brfss[columnas_existentes]
+
+            # Guardar en SQLite
             df_brfss.to_sql("BRFSS_2024", conn, if_exists="replace", index=False)
-            print(f"✅ 'BRFSS_2024' guardado: {df_brfss.shape[0]} filas × {df_brfss.shape[1]} columnas")
+            print(f"✅ 'BRFSS_2024' guardado (solo columnas relevantes): {df_brfss.shape[0]} filas × {df_brfss.shape[1]} columnas")
+
 except Exception as e:
     print(f"❌ Error con BRFSS: {e}")
 
@@ -91,11 +115,13 @@ try:
     with gzip.open(path_gz, "rb") as f_in:
         with open(path_csv, "wb") as f_out:
             f_out.write(f_in.read())
-    df_off = pd.read_csv(path_csv)
+    # Leer CSV tolerante a errores
+    df_off = pd.read_csv(path_csv, on_bad_lines="skip", encoding="utf-8", low_memory=False)
     df_off.to_sql("OpenFoodFacts", conn, if_exists="replace", index=False)
     print(f"✅ 'OpenFoodFacts' guardado: {df_off.shape[0]} filas × {df_off.shape[1]} columnas")
 except Exception as e:
     print(f"❌ Error con OpenFoodFacts: {e}")
+
 
 # --- FoodData Central ---
 fdc_url = "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_foundation_food_csv_2025-04-24.zip"
@@ -118,6 +144,24 @@ try:
         print(f"✅ '{table_name}' guardado: {df_fdc.shape[0]} filas × {df_fdc.shape[1]} columnas")
 except Exception as e:
     print(f"❌ Error con FoodData Central: {e}")
+
+    # --- ODEPA Precios al Consumidor ---
+try:
+    print("\n📥 Descargando ODEPA precios al consumidor...")
+    url = "https://datos.odepa.gob.cl/api/3/action/datastore_search"
+    params = {
+        "resource_id": "7f8f1255-a13b-4233-aad0-631054a8a025",
+        "limit": 50000  # ajusta según necesidad
+    }
+    resp = requests.get(url, params=params)
+    resp.raise_for_status()
+    data = resp.json()
+    records = data["result"]["records"]
+    df_odepa = pd.DataFrame(records)
+    df_odepa.to_sql("ODEPA_Precios", conn, if_exists="replace", index=False)
+    print(f"✅ 'ODEPA_Precios' guardado: {df_odepa.shape[0]} filas × {df_odepa.shape[1]} columnas")
+except Exception as e:
+    print(f"❌ Error con ODEPA: {e}")
 
 # --- Cerrar SQLite ---
 conn.close()
