@@ -1,4 +1,8 @@
-*.XPT
+# Archivos de datos grandes
+data_csv/
+data_xpt/
+pipeline.db
+*.gz
 *.zip
+*.XPT
 *.csv
-git add .gitignore
