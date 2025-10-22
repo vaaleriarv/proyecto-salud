@@ -1,0 +1,124 @@
+import pandas as pd
+import requests
+from io import BytesIO
+import io   
+import sqlite3
+import zipfile
+import gzip
+import os
+
+
+# --- Crear carpetas temporales ---
+os.makedirs("data_xpt", exist_ok=True)
+os.makedirs("data_csv", exist_ok=True)
+
+# --- Conectar SQLite ---
+conn = sqlite3.connect("pipeline.db")
+
+# --- NHANES 2021 ---
+nhanes_urls = {
+    "ALB_CR_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/ALB_CR_L.xpt",
+    "AGP_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/AGP_L.xpt",
+    "HDL_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/HDL_L.xpt",
+    "TRIGLY_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/TRIGLY_L.xpt",
+    "TCHOL_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/TCHOL_L.xpt",
+    "CBC_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/CBC_L.xpt",
+    "FASTQX_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/FASTQX_L.xpt",
+    "FERTIN_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/FERTIN_L.xpt",
+    "FOLATE_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/FOLATE_L.xpt",
+    "GHB_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/GHB_L.xpt",
+    "HEPA_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/HEPA_L.xpt",
+    "HEPB_S_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/HEPB_S_L.xpt",
+    "HSCRP_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/HSCRP_L.xpt",
+    "INS_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/INS_L.xpt",
+    "PBCD_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/PBCD_L.xpt",
+    "IHGEM_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/IHGEM_L.xpt",
+    "GLU_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/GLU_L.xpt",
+    "FOLFMS_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/FOLFMS_L.xpt",
+    "TST_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/TST_L.xpt",
+    "BIOPRO_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BIOPRO_L.xpt",
+    "TFR_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/TFR_L.xpt",
+    "UCPREG_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/UCPREG_L.xpt",
+    "VID_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/VID_L.xpt",
+    "VOCWB_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/VOCWB_L.xpt",
+    "BMX_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/BMX_L.xpt",
+    "DEMO_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/DEMO_L.xpt",
+    "DR1TOT_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/DR1TOT_L.xpt",
+    "DR2TOT_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/DR2TOT_L.xpt"
+}
+
+for name, url in nhanes_urls.items():
+    try:
+        print(f"\n📥 Descargando NHANES: {name}...")
+        response = requests.get(url)
+        response.raise_for_status()
+        path = f"data_xpt/{name}.xpt"
+        with open(path, "wb") as f:
+            f.write(response.content)
+        df = pd.read_sas(path, format="xport")
+        df.to_sql(name, conn, if_exists="replace", index=False)
+        print(f"✅ '{name}' guardado: {df.shape[0]} filas × {df.shape[1]} columnas")
+    except Exception as e:
+        print(f"❌ Error con {name}: {e}")
+
+# --- BRFSS 2024 ---
+brfss_url = "https://www.cdc.gov/brfss/annual_data/2024/files/LLCP2024XPT.zip"
+try:
+    print("\n📥 Descargando BRFSS 2024...")
+    resp = requests.get(brfss_url)
+    resp.raise_for_status()
+    with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
+        print("Archivos en ZIP:", z.namelist())
+        xpt_files = [f for f in z.namelist() if ".xpt" in f.lower()]
+        with z.open(xpt_files[0]) as f:
+            df_brfss = pd.read_sas(f, format="xport")
+            df_brfss.to_sql("BRFSS_2024", conn, if_exists="replace", index=False)
+            print(f"✅ 'BRFSS_2024' guardado: {df_brfss.shape[0]} filas × {df_brfss.shape[1]} columnas")
+except Exception as e:
+    print(f"❌ Error con BRFSS: {e}")
+
+# --- OpenFoodFacts ---
+openfood_url = "https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz"
+try:
+    print("\n📥 Descargando OpenFoodFacts...")
+    resp = requests.get(openfood_url)
+    resp.raise_for_status()
+    path_gz = "data_csv/openfoodfacts.csv.gz"
+    path_csv = "data_csv/openfoodfacts.csv"
+    with open(path_gz, "wb") as f:
+        f.write(resp.content)
+    # Descomprimir .gz
+    with gzip.open(path_gz, "rb") as f_in:
+        with open(path_csv, "wb") as f_out:
+            f_out.write(f_in.read())
+    df_off = pd.read_csv(path_csv)
+    df_off.to_sql("OpenFoodFacts", conn, if_exists="replace", index=False)
+    print(f"✅ 'OpenFoodFacts' guardado: {df_off.shape[0]} filas × {df_off.shape[1]} columnas")
+except Exception as e:
+    print(f"❌ Error con OpenFoodFacts: {e}")
+
+# --- FoodData Central ---
+fdc_url = "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_foundation_food_csv_2025-04-24.zip"
+try:
+    print("\n📥 Descargando FoodData Central...")
+    resp = requests.get(fdc_url)
+    resp.raise_for_status()
+    path_zip = "data_csv/fooddata.zip"
+    with open(path_zip, "wb") as f:
+        f.write(resp.content)
+    with zipfile.ZipFile(path_zip, "r") as z:
+        z.extractall("data_csv/fooddata")
+    # Leer todos los CSV dentro de la carpeta
+    import glob
+    csv_files = glob.glob("data_csv/fooddata/*.csv")
+    for csv_file in csv_files:
+        table_name = os.path.splitext(os.path.basename(csv_file))[0]
+        df_fdc = pd.read_csv(csv_file)
+        df_fdc.to_sql(table_name, conn, if_exists="replace", index=False)
+        print(f"✅ '{table_name}' guardado: {df_fdc.shape[0]} filas × {df_fdc.shape[1]} columnas")
+except Exception as e:
+    print(f"❌ Error con FoodData Central: {e}")
+
+# --- Cerrar SQLite ---
+conn.close()
+print("\n🎉 ¡Todos los datasets guardados en 'pipeline.db'!")
