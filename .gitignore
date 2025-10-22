@@ -1,0 +1,4 @@
+*.XPT
+*.zip
+*.csv
+git add .gitignore
