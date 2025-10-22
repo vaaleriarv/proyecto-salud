@@ -6,6 +6,8 @@ import sqlite3
 import zipfile
 import gzip
 import os
+from functools import reduce
+
 
 
 # --- Crear carpetas temporales ---
@@ -47,9 +49,10 @@ nhanes_urls = {
     "DR2TOT_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/DR2TOT_L.xpt"
 }
 
+# Descarga y guarda tablas individuales
 for name, url in nhanes_urls.items():
     try:
-        print(f"\n📥 Descargando NHANES: {name}...")
+        print(f"\nDescargando NHANES: {name}...")
         response = requests.get(url)
         response.raise_for_status()
         path = f"data_xpt/{name}.xpt"
@@ -57,14 +60,29 @@ for name, url in nhanes_urls.items():
             f.write(response.content)
         df = pd.read_sas(path, format="xport")
         df.to_sql(name, conn, if_exists="replace", index=False)
-        print(f"✅ '{name}' guardado: {df.shape[0]} filas × {df.shape[1]} columnas")
+        print(f"'{name}' guardado: {df.shape[0]} filas × {df.shape[1]} columnas")
     except Exception as e:
-        print(f"❌ Error con {name}: {e}")
+        print(f"Error con {name}: {e}")
+
+# --- CREAR TABLA COMBINADA NHANES_2021 ---
+tablas_nhanes = list(nhanes_urls.keys())
+dfs = {}
+
+for nombre in tablas_nhanes:
+    df_temp = pd.read_sql(f"SELECT * FROM {nombre}", conn)
+    if "SEQN" not in df_temp.columns:
+        continue
+    df_temp = df_temp.rename(columns={col: f"{nombre}_{col}" for col in df_temp.columns if col != "SEQN"})
+    dfs[nombre] = df_temp
+
+df_nhanes = reduce(lambda left, right: pd.merge(left, right, on="SEQN", how="outer"), dfs.values())
+df_nhanes.to_sql("NHANES_2021", conn, if_exists="replace", index=False)
+print("\nTabla combinada 'NHANES_2021' creada y guardada.")
 
 # --- BRFSS 2024 ---
 brfss_url = "https://www.cdc.gov/brfss/annual_data/2024/files/LLCP2024XPT.zip"
 try:
-    print("\n📥 Descargando BRFSS 2024...")
+    print("\nDescargando BRFSS 2024...")
     resp = requests.get(brfss_url)
     resp.raise_for_status()
 
@@ -76,12 +94,11 @@ try:
             raise Exception("No se encontró archivo .xpt en el ZIP")
 
         with z.open(xpt_files[0]) as f:
-            # Leer el archivo .xpt
             df_brfss = pd.read_sas(f, format="xport")
 
             # Definir las columnas que te interesan
             columnas_relevantes = [
-                '_STATE', 'MARITAL', '_CHLDCNT', '_INCOMG1', '_AGE_G', '_SEX', '_RACE',
+                '_SEQNO' ,'_STATE', 'MARITAL', '_CHLDCNT', '_INCOMG1', '_AGE_G', '_SEX', '_RACE',
                 '_URBSTAT', '_METSTAT', '_EDUCAG', 'MEDCOST1', 'CHECKUP1', '_HLTHPL2',
                 'PDIABTS1', 'DIABETE4', 'DIABAGE4', 'DIABTYPE', 'PREDIAB2', 'EXERANY2',
                 '_TOTINDA', 'WEIGHT2', 'WTKG3', 'HEIGHT3', '_BMI5', '_BMI5CAT', '_RFBMI5',
@@ -90,21 +107,19 @@ try:
                 '_RFDRHV9', 'MARIJAN1', 'SSBFRUT3'
             ]
 
-            # Filtrar solo las columnas que existan en el dataset
             columnas_existentes = [c for c in columnas_relevantes if c in df_brfss.columns]
             df_brfss = df_brfss[columnas_existentes]
 
-            # Guardar en SQLite
             df_brfss.to_sql("BRFSS_2024", conn, if_exists="replace", index=False)
-            print(f"✅ 'BRFSS_2024' guardado (solo columnas relevantes): {df_brfss.shape[0]} filas × {df_brfss.shape[1]} columnas")
+            print(f"'BRFSS_2024' guardado (solo columnas seleccionadas): {df_brfss.shape[0]} filas × {df_brfss.shape[1]} columnas")
 
 except Exception as e:
-    print(f"❌ Error con BRFSS: {e}")
+    print(f"Error con BRFSS: {e}")
 
 # --- OpenFoodFacts ---
 openfood_url = "https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz"
 try:
-    print("\n📥 Descargando OpenFoodFacts...")
+    print("\nDescargando OpenFoodFacts...")
     resp = requests.get(openfood_url)
     resp.raise_for_status()
     path_gz = "data_csv/openfoodfacts.csv.gz"
@@ -118,15 +133,15 @@ try:
     # Leer CSV tolerante a errores
     df_off = pd.read_csv(path_csv, on_bad_lines="skip", encoding="utf-8", low_memory=False)
     df_off.to_sql("OpenFoodFacts", conn, if_exists="replace", index=False)
-    print(f"✅ 'OpenFoodFacts' guardado: {df_off.shape[0]} filas × {df_off.shape[1]} columnas")
+    print(f"'OpenFoodFacts' guardado: {df_off.shape[0]} filas × {df_off.shape[1]} columnas")
 except Exception as e:
-    print(f"❌ Error con OpenFoodFacts: {e}")
+    print(f"Error con OpenFoodFacts: {e}")
 
 
 # --- FoodData Central ---
 fdc_url = "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_foundation_food_csv_2025-04-24.zip"
 try:
-    print("\n📥 Descargando FoodData Central...")
+    print("\n Descargando FoodData Central...")
     resp = requests.get(fdc_url)
     resp.raise_for_status()
     path_zip = "data_csv/fooddata.zip"
@@ -141,13 +156,13 @@ try:
         table_name = os.path.splitext(os.path.basename(csv_file))[0]
         df_fdc = pd.read_csv(csv_file)
         df_fdc.to_sql(table_name, conn, if_exists="replace", index=False)
-        print(f"✅ '{table_name}' guardado: {df_fdc.shape[0]} filas × {df_fdc.shape[1]} columnas")
+        print(f" '{table_name}' guardado: {df_fdc.shape[0]} filas × {df_fdc.shape[1]} columnas")
 except Exception as e:
-    print(f"❌ Error con FoodData Central: {e}")
+    print(f" Error con FoodData Central: {e}")
 
     # --- ODEPA Precios al Consumidor ---
 try:
-    print("\n📥 Descargando ODEPA precios al consumidor...")
+    print("\n Descargando ODEPA precios al consumidor...")
     url = "https://datos.odepa.gob.cl/api/3/action/datastore_search"
     params = {
         "resource_id": "7f8f1255-a13b-4233-aad0-631054a8a025",
@@ -159,9 +174,9 @@ try:
     records = data["result"]["records"]
     df_odepa = pd.DataFrame(records)
     df_odepa.to_sql("ODEPA_Precios", conn, if_exists="replace", index=False)
-    print(f"✅ 'ODEPA_Precios' guardado: {df_odepa.shape[0]} filas × {df_odepa.shape[1]} columnas")
+    print(f" 'ODEPA_Precios' guardado: {df_odepa.shape[0]} filas × {df_odepa.shape[1]} columnas")
 except Exception as e:
-    print(f"❌ Error con ODEPA: {e}")
+    print(f" Error con ODEPA: {e}")
 
 # --- Cerrar SQLite ---
 conn.close()
