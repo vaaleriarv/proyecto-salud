@@ -49,13 +49,12 @@ nhanes_urls = {
     "DR2TOT_L": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2021/DataFiles/DR2TOT_L.xpt"
 }
 
-# Descarga y guarda tablas individuales
 for name, url in nhanes_urls.items():
     try:
         print(f"\nDescargando NHANES: {name}...")
         response = requests.get(url)
         response.raise_for_status()
-        path = f"data_xpt/{name}.xpt"
+        path = f"{name}.xpt"
         with open(path, "wb") as f:
             f.write(response.content)
         df = pd.read_sas(path, format="xport")
@@ -64,20 +63,6 @@ for name, url in nhanes_urls.items():
     except Exception as e:
         print(f"Error con {name}: {e}")
 
-# --- CREAR TABLA COMBINADA NHANES_2021 ---
-tablas_nhanes = list(nhanes_urls.keys())
-dfs = {}
-
-for nombre in tablas_nhanes:
-    df_temp = pd.read_sql(f"SELECT * FROM {nombre}", conn)
-    if "SEQN" not in df_temp.columns:
-        continue
-    df_temp = df_temp.rename(columns={col: f"{nombre}_{col}" for col in df_temp.columns if col != "SEQN"})
-    dfs[nombre] = df_temp
-
-df_nhanes = reduce(lambda left, right: pd.merge(left, right, on="SEQN", how="outer"), dfs.values())
-df_nhanes.to_sql("NHANES_2021", conn, if_exists="replace", index=False)
-print("\nTabla combinada 'NHANES_2021' creada y guardada.")
 
 # --- BRFSS 2024 ---
 brfss_url = "https://www.cdc.gov/brfss/annual_data/2024/files/LLCP2024XPT.zip"
@@ -116,45 +101,100 @@ try:
 except Exception as e:
     print(f"Error con BRFSS: {e}")
 
-# --- FoodData Central ---
+# --- FoodData Central - Solo tablas necesarias ---
 fdc_url = "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_foundation_food_csv_2025-04-24.zip"
 try:
-    print("\n Descargando FoodData Central...")
+    print("Descargando FoodData Central...", end=" ")
     resp = requests.get(fdc_url)
     resp.raise_for_status()
     path_zip = "data_csv/fooddata.zip"
     with open(path_zip, "wb") as f:
         f.write(resp.content)
+    
+    print("OK")
+    print("Extrayendo archivos...", end=" ")
     with zipfile.ZipFile(path_zip, "r") as z:
         z.extractall("data_csv/fooddata")
-    # Leer todos los CSV dentro de la carpeta
+    print("OK")
+    
+    # Solo cargar tablas principales
+    tablas_fdc_principales = [
+        'food.csv',
+        'nutrient.csv', 
+        'food_nutrient.csv',
+        'food_category.csv',
+        'food_portion.csv'
+    ]
+    
     import glob
-    csv_files = glob.glob("data_csv/fooddata/*.csv")
-    for csv_file in csv_files:
-        table_name = os.path.splitext(os.path.basename(csv_file))[0]
-        df_fdc = pd.read_csv(csv_file)
-        df_fdc.to_sql(table_name, conn, if_exists="replace", index=False)
-        print(f" '{table_name}' guardado: {df_fdc.shape[0]} filas × {df_fdc.shape[1]} columnas")
+    csv_path = "data_csv/fooddata/FoodData_Central_foundation_food_csv_2025-04-24"
+    
+    for tabla_nombre in tablas_fdc_principales:
+        tabla_path = os.path.join(csv_path, tabla_nombre)
+        if os.path.exists(tabla_path):
+            table_name = tabla_nombre.replace('.csv', '').upper()
+            print(f"Cargando {tabla_nombre}...", end=" ")
+            df_fdc = pd.read_csv(tabla_path, low_memory=False)
+            df_fdc.to_sql(f"FDC_{table_name}", conn, if_exists="replace", index=False)
+            print(f"OK - {df_fdc.shape[0]} filas x {df_fdc.shape[1]} columnas")
+        else:
+            print(f"Advertencia: {tabla_nombre} no encontrado")
+    
 except Exception as e:
-    print(f" Error con FoodData Central: {e}")
+    print(f"ERROR: {e}")
 
-    # --- ODEPA Precios al Consumidor ---
+# --- ODEPA Precios al Consumidor ---
 try:
-    print("\n Descargando ODEPA precios al consumidor...")
-    url = "https://datos.odepa.gob.cl/api/3/action/datastore_search"
-    params = {
-        "resource_id": "7f8f1255-a13b-4233-aad0-631054a8a025",
-        "limit": 50000  # ajusta según necesidad
-    }
-    resp = requests.get(url, params=params)
-    resp.raise_for_status()
-    data = resp.json()
-    records = data["result"]["records"]
-    df_odepa = pd.DataFrame(records)
-    df_odepa.to_sql("ODEPA_Precios", conn, if_exists="replace", index=False)
-    print(f" 'ODEPA_Precios' guardado: {df_odepa.shape[0]} filas × {df_odepa.shape[1]} columnas")
+    print("Descargando ODEPA (puede tomar varios minutos)...")
+    
+    # Opción 1: Descarga directa del CSV completo
+    url_csv = "https://datos.odepa.gob.cl/dataset/c3ca8246-3d84-4145-9e34-525b0ba95859/resource/7f8f1255-a13b-4233-aad0-631054a8a025/download/precio_consumidor_publico_2025.csv"
+    
+    print("Descargando CSV completo...", end=" ")
+    df_odepa = pd.read_csv(url_csv, encoding='utf-8')
+    print(f"OK - {df_odepa.shape[0]} filas x {df_odepa.shape[1]} columnas")
+    
+    df_odepa.to_sql("ODEPA_PRECIOS", conn, if_exists="replace", index=False)
+    print("Datos ODEPA guardados correctamente")
+    
 except Exception as e:
-    print(f" Error con ODEPA: {e}")
+    print(f"ERROR: {e}")
+    print("Intentando método alternativo con API...")
+    
+    try:
+        # Método alternativo: API con paginación
+        all_records = []
+        offset = 0
+        limit = 32000  # Máximo por request
+        
+        while True:
+            url = "https://datos.odepa.gob.cl/api/3/action/datastore_search"
+            params = {
+                "resource_id": "7f8f1255-a13b-4233-aad0-631054a8a025",
+                "limit": limit,
+                "offset": offset
+            }
+            resp = requests.get(url, params=params)
+            resp.raise_for_status()
+            data = resp.json()
+            records = data["result"]["records"]
+            
+            if not records:
+                break
+            
+            all_records.extend(records)
+            offset += limit
+            print(f"Descargados {len(all_records)} registros...", end="\r")
+            
+            if len(records) < limit:
+                break
+        
+        df_odepa = pd.DataFrame(all_records)
+        df_odepa.to_sql("ODEPA_PRECIOS", conn, if_exists="replace", index=False)
+        print(f"\nODEPA guardado: {df_odepa.shape[0]} filas x {df_odepa.shape[1]} columnas")
+        
+    except Exception as e2:
+        print(f"\nERROR en método alternativo: {e2}")
 
 # --- Cerrar SQLite ---
 conn.close()
