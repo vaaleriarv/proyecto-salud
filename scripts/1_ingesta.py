@@ -57,10 +57,13 @@ for name, url in nhanes_urls.items():
         with open(path, "wb") as f:
             f.write(response.content)
 
+        # Leer XPT y guardar en df
+        df = pd.read_sas(path, format='xport')
         df.to_sql(name, conn, if_exists="replace", index=False)
         print(f"'{name}' guardado: {df.shape[0]} filas × {df.shape[1]} columnas")
     except Exception as e:
         print(f"Error con {name}: {e}")
+
 
 # --- BRFSS 2024 ---
 brfss_url = "https://www.cdc.gov/brfss/annual_data/2024/files/LLCP2024XPT.zip"
@@ -141,23 +144,27 @@ try:
 except Exception as e:
     print(f"ERROR: {e}")
 
+# -- ODEPA 2025 --  
 
 url_csv = "https://datos.odepa.gob.cl/dataset/c3ca8246-3d84-4145-9e34-525b0ba95859/resource/7f8f1255-a13b-4233-aad0-631054a8a025/download/precio_consumidor_publico_2025.csv"
 
 try:
     print("Descargando ODEPA (CSV completo)...")
-    response = requests.get(url_csv, verify=False)  # ⚠ ignora error SSL
+    response = requests.get(url_csv, verify=False)  
     response.raise_for_status()
     
-    with open("data_xpt/precio_consumidor_publico_2025.csv", "wb") as f:
+    path_csv = "data_xpt/precio_consumidor_publico_2025.csv"
+    with open(path_csv, "wb") as f:
         f.write(response.content)
 
-    df_odepa = pd.read_csv("data_xpt/precio_consumidor_publico_2025.csv", encoding="utf-8")
-    print(f" ODEPA cargado correctamente: {df_odepa.shape[0]} filas × {df_odepa.shape[1]} columnas")
+    df_odepa = pd.read_csv(path_csv, encoding="utf-8")
+    print(f"ODEPA cargado correctamente: {df_odepa.shape[0]} filas × {df_odepa.shape[1]} columnas")
+
+    df_odepa.to_sql("ODEPA_2025", conn, if_exists="replace", index=False)
+    print(f"'ODEPA_2025' guardado en SQLite: {df_odepa.shape[0]} filas × {df_odepa.shape[1]} columnas")
+
 except Exception as e:
     print(f"Error al descargar ODEPA: {e}")
 
-
-# --- Cerrar SQLite ---
 conn.close()
 print("\n ¡Todos los datasets guardados en 'pipeline.db'!")
