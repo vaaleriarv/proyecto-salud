@@ -22,7 +22,8 @@ try:
         if col in df_demo.columns:
             df_demo[col] = df_demo[col].map(mapping)
     df_demo.to_sql("DEMO_L_LIMPIO", conn, if_exists="replace", index=False)
-except:
+except Exception as e:
+    print(f"Error en limpieza DEMO_L:", e)
     pass
 
 # --- LIMPIEZA DR1TOT_L ---
@@ -76,51 +77,50 @@ except:
     pass
 
 # --- LIMPIEZA PERFIL LIPÍDICO Y BIOQUÍMICA ---
-try:
-    # HDL_L
-    df_hdl = pd.read_sql("SELECT * FROM HDL_L", conn)
-    df_hdl["LBXHDL_LIMPIO"] = pd.to_numeric(df_hdl["LBXHDL"], errors="coerce")
-    df_hdl.loc[(df_hdl["LBXHDL_LIMPIO"] < 10) | (df_hdl["LBXHDL_LIMPIO"] > 200), "LBXHDL_LIMPIO"] = np.nan
-    df_hdl.to_sql("HDL_L_LIMPIO", conn, if_exists="replace", index=False)
+print("\nLimpieza de perfil lipídico y bioquímica")
 
-    # TRIGLY_L
-    df_trig = pd.read_sql("SELECT * FROM TRIGLY_L", conn)
-    df_trig["LBXTRIG_LIMPIO"] = pd.to_numeric(df_trig["LBXTRIG"], errors="coerce")
-    df_trig.loc[(df_trig["LBXTRIG_LIMPIO"] < 10) | (df_trig["LBXTRIG_LIMPIO"] > 1000), "LBXTRIG_LIMPIO"] = np.nan
-    df_trig.to_sql("TRIGLY_L_LIMPIO", conn, if_exists="replace", index=False)
+tablas_perfil = {
+    "HDL_L": {"nombre_col": ["LBDHDD", "LBXHDL"], "rango": (10, 200)},
+    "TRIGLY_L": {"nombre_col": ["LBDTRSI", "LBXTLG"], "rango": (10, 1000)},  # cambiamos LBXTRIG -> LBXTLG
+    "TCHOL_L": {"nombre_col": ["LBXTC"], "rango": (50, 500)},
+    "INS_L": {"nombre_col": ["LBXIN", "LBDINSI"], "rango": (1, 1000)},
+    "BIOPRO_L": {"nombre_col": ["LBXSUA"], "rango": (1, 1000)},  # elige la proteína que te interesa
+    "FOLATE_L": {"nombre_col": ["LBDRFO"], "rango": (1, 200)},
+    "FASTQX_L": {"nombre_col": ["PHAFSTHR"], "rango": (50, 1000)}  # ejemplo si quieres usar PHA fasting
+}
 
-    # TCHOL_L
-    df_tchol = pd.read_sql("SELECT * FROM TCHOL_L", conn)
-    df_tchol["LBXTCHOL_LIMPIO"] = pd.to_numeric(df_tchol["LBXTCHOL"], errors="coerce")
-    df_tchol.loc[(df_tchol["LBXTCHOL_LIMPIO"] < 50) | (df_tchol["LBXTCHOL_LIMPIO"] > 500), "LBXTCHOL_LIMPIO"] = np.nan
-    df_tchol.to_sql("TCHOL_L_LIMPIO", conn, if_exists="replace", index=False)
+for tabla, info in tablas_perfil.items():
+    try:
+        print(f"\nProcesando tabla '{tabla}'...")
+        df = pd.read_sql(f"SELECT * FROM {tabla}", conn)
+        print(f"  Columnas disponibles: {df.columns.tolist()}")
 
-    # INS_L
-    df_ins = pd.read_sql("SELECT * FROM INS_L", conn)
-    df_ins["LBXINS_LIMPIO"] = pd.to_numeric(df_ins["LBXINS"], errors="coerce")
-    df_ins.loc[(df_ins["LBXINS_LIMPIO"] < 1) | (df_ins["LBXINS_LIMPIO"] > 1000), "LBXINS_LIMPIO"] = np.nan
-    df_ins.to_sql("INS_L_LIMPIO", conn, if_exists="replace", index=False)
+        # Buscar la columna válida
+        col_valida = None
+        for col in info["nombre_col"]:
+            if col in df.columns:
+                col_valida = col
+                break
+        if col_valida is None:
+            print(f"  No se encontró columna esperada en {tabla}, se omite")
+            continue
 
-    # BIOPRO_L
-    df_biopro = pd.read_sql("SELECT * FROM BIOPRO_L", conn)
-    df_biopro["LBDBIO_LIMPIO"] = pd.to_numeric(df_biopro["LBDBIO"], errors="coerce")
-    df_biopro.loc[(df_biopro["LBDBIO_LIMPIO"] < 1) | (df_biopro["LBDBIO_LIMPIO"] > 1000), "LBDBIO_LIMPIO"] = np.nan
-    df_biopro.to_sql("BIOPRO_L_LIMPIO", conn, if_exists="replace", index=False)
+        # Limpiar y convertir a numérico
+        df[f"{tabla}_LIMPIO"] = pd.to_numeric(df[col_valida], errors="coerce")
+        df.loc[
+            (df[f"{tabla}_LIMPIO"] < info["rango"][0]) | (df[f"{tabla}_LIMPIO"] > info["rango"][1]),
+            f"{tabla}_LIMPIO"
+        ] = np.nan
 
-    # FOLATE_L
-    df_folate = pd.read_sql("SELECT * FROM FOLATE_L", conn)
-    df_folate["LBXFA_LIMPIO"] = pd.to_numeric(df_folate["LBXFA"], errors="coerce")
-    df_folate.loc[(df_folate["LBXFA_LIMPIO"] < 1) | (df_folate["LBXFA_LIMPIO"] > 200), "LBXFA_LIMPIO"] = np.nan
-    df_folate.to_sql("FOLATE_L_LIMPIO", conn, if_exists="replace", index=False)
+        print(f"  Valores válidos: {df[f'{tabla}_LIMPIO'].notna().sum():,}")
+        print(f"  Valores inválidos / NaN: {df[f'{tabla}_LIMPIO'].isna().sum():,}")
 
-    # FASTQX_L
-    df_fastq = pd.read_sql("SELECT * FROM FASTQX_L", conn)
-    df_fastq["LBXFAST_LIMPIO"] = pd.to_numeric(df_fastq["LBXFAST"], errors="coerce")
-    df_fastq.loc[(df_fastq["LBXFAST_LIMPIO"] < 50) | (df_fastq["LBXFAST_LIMPIO"] > 1000), "LBXFAST_LIMPIO"] = np.nan
-    df_fastq.to_sql("FASTQX_L_LIMPIO", conn, if_exists="replace", index=False)
+        # Guardar tabla limpia
+        df.to_sql(f"{tabla}_L_LIMPIO", conn, if_exists="replace", index=False)
+        print(f"  ✔ Tabla '{tabla}_L_LIMPIO' creada correctamente")
 
-except Exception as e:
-    print("Error en limpieza de perfil lipídico/bioquímica:", e)
+    except Exception as e:
+        print(f"  Error procesando {tabla}: {e}")
 
 
 conn.close()
