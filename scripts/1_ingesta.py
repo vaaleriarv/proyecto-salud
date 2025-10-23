@@ -1,5 +1,6 @@
 import pandas as pd
 import requests
+import ssl
 from io import BytesIO
 import io   
 import sqlite3
@@ -8,9 +9,7 @@ import gzip
 import os
 from functools import reduce
 
-
-
-# --- Crear carpetas temporales ---
+# --- Crear carpetas de data ---
 os.makedirs("data_xpt", exist_ok=True)
 os.makedirs("data_csv", exist_ok=True)
 
@@ -54,15 +53,14 @@ for name, url in nhanes_urls.items():
         print(f"\nDescargando NHANES: {name}...")
         response = requests.get(url)
         response.raise_for_status()
-        path = f"{name}.xpt"
+        path = f"data_xpt/{name}.xpt"
         with open(path, "wb") as f:
             f.write(response.content)
-        df = pd.read_sas(path, format="xport")
+
         df.to_sql(name, conn, if_exists="replace", index=False)
         print(f"'{name}' guardado: {df.shape[0]} filas × {df.shape[1]} columnas")
     except Exception as e:
         print(f"Error con {name}: {e}")
-
 
 # --- BRFSS 2024 ---
 brfss_url = "https://www.cdc.gov/brfss/annual_data/2024/files/LLCP2024XPT.zip"
@@ -143,58 +141,22 @@ try:
 except Exception as e:
     print(f"ERROR: {e}")
 
-# --- ODEPA Precios al Consumidor ---
+
+url_csv = "https://datos.odepa.gob.cl/dataset/c3ca8246-3d84-4145-9e34-525b0ba95859/resource/7f8f1255-a13b-4233-aad0-631054a8a025/download/precio_consumidor_publico_2025.csv"
+
 try:
-    print("Descargando ODEPA (puede tomar varios minutos)...")
+    print("Descargando ODEPA (CSV completo)...")
+    response = requests.get(url_csv, verify=False)  # ⚠ ignora error SSL
+    response.raise_for_status()
     
-    # Opción 1: Descarga directa del CSV completo
-    url_csv = "https://datos.odepa.gob.cl/dataset/c3ca8246-3d84-4145-9e34-525b0ba95859/resource/7f8f1255-a13b-4233-aad0-631054a8a025/download/precio_consumidor_publico_2025.csv"
-    
-    print("Descargando CSV completo...", end=" ")
-    df_odepa = pd.read_csv(url_csv, encoding='utf-8')
-    print(f"OK - {df_odepa.shape[0]} filas x {df_odepa.shape[1]} columnas")
-    
-    df_odepa.to_sql("ODEPA_PRECIOS", conn, if_exists="replace", index=False)
-    print("Datos ODEPA guardados correctamente")
-    
+    with open("data_xpt/precio_consumidor_publico_2025.csv", "wb") as f:
+        f.write(response.content)
+
+    df_odepa = pd.read_csv("data_xpt/precio_consumidor_publico_2025.csv", encoding="utf-8")
+    print(f" ODEPA cargado correctamente: {df_odepa.shape[0]} filas × {df_odepa.shape[1]} columnas")
 except Exception as e:
-    print(f"ERROR: {e}")
-    print("Intentando método alternativo con API...")
-    
-    try:
-        # Método alternativo: API con paginación
-        all_records = []
-        offset = 0
-        limit = 32000  # Máximo por request
-        
-        while True:
-            url = "https://datos.odepa.gob.cl/api/3/action/datastore_search"
-            params = {
-                "resource_id": "7f8f1255-a13b-4233-aad0-631054a8a025",
-                "limit": limit,
-                "offset": offset
-            }
-            resp = requests.get(url, params=params)
-            resp.raise_for_status()
-            data = resp.json()
-            records = data["result"]["records"]
-            
-            if not records:
-                break
-            
-            all_records.extend(records)
-            offset += limit
-            print(f"Descargados {len(all_records)} registros...", end="\r")
-            
-            if len(records) < limit:
-                break
-        
-        df_odepa = pd.DataFrame(all_records)
-        df_odepa.to_sql("ODEPA_PRECIOS", conn, if_exists="replace", index=False)
-        print(f"\nODEPA guardado: {df_odepa.shape[0]} filas x {df_odepa.shape[1]} columnas")
-        
-    except Exception as e2:
-        print(f"\nERROR en método alternativo: {e2}")
+    print(f"Error al descargar ODEPA: {e}")
+
 
 # --- Cerrar SQLite ---
 conn.close()

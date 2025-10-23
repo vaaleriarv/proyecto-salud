@@ -2,7 +2,6 @@ import pandas as pd
 import sqlite3
 import numpy as np
 
-# Conexión a la base de datos
 conn = sqlite3.connect("pipeline.db")
 
 # --- BMX_L: calcular IMC y clasificar ---
@@ -33,6 +32,7 @@ print(df_bmx['BMDBMIC'].value_counts(dropna=False))
 
 
 # --- GLU_L: crear columna GLURANGOS ---
+# Columna con rangos de glucosa en ayunas
 df_glu = pd.read_sql("SELECT * FROM GLU_L", conn)
 
 def categorizar_glucosa(x):
@@ -49,9 +49,11 @@ def categorizar_glucosa(x):
 
 df_glu["GLURANGOS"] = df_glu["LBXGLU"].apply(categorizar_glucosa)
 
+df_glu = df_glu.dropna(subset=['GLURANGOS'])
+
 df_glu.to_sql("GLU_L", conn, if_exists="replace", index=False)
 
-print("\nPrimeros valores de GLU_L con GLURANGOS:")
+print(df_bmx['BMDBMIC'].value_counts(dropna=False))
 print(df_glu[["LBXGLU", "GLURANGOS"]].head())
 
 conn.close()
