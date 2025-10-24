@@ -98,6 +98,20 @@ if 'Fecha inicio' in df.columns and df['Fecha inicio'].notna().any():
     df['semana_año'] = df['Fecha inicio'].dt.isocalendar().week
     print("  Variables temporales derivadas creadas: año_fecha, mes_fecha, semana_año")
 
+# Agrupar por producto y calcular estadísticas
+odepa_precios = df.groupby('Producto').agg({
+    'Precio promedio': ['mean', 'min', 'max', 'std'],
+    'Region': 'count'
+}).reset_index()
+
+odepa_precios.columns = ['Producto', 'Precio_Promedio_CLP', 'Precio_Min_CLP',
+                          'Precio_Max_CLP', 'Precio_Std_CLP', 'N_Observaciones']
+
+# Agregar grupo de alimento
+grupos = df.groupby('Producto')['Grupo'].first().reset_index()
+odepa_precios = odepa_precios.merge(grupos, on='Producto', how='left')
+
+
 # ----------------------------------------------------------------------------
 # Normalización de columnas de texto
 # ----------------------------------------------------------------------------
