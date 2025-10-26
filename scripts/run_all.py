@@ -16,10 +16,10 @@ for s in scripts:
     print(f"\n=== Ejecutando {script_path} ===\n")
     try:
         subprocess.run(["python", script_path], check=True)
-        print(f"{s} ejecutado correctamente ✅\n")
+        print(f"{s} ejecutado correctamente \n")
     except subprocess.CalledProcessError as e:
-        print(f"Error al ejecutar {s}: {e} ❌\n")
+        print(f"Error al ejecutar {s}: {e} \n")
     except Exception as e:
-        print(f"Excepción inesperada en {s}: {e} ❌\n")
+        print(f"Excepción inesperada en {s}: {e} \n")
 
-print("Ejecución de todos los scripts finalizada 🎯")
+print("Ejecución de todos los scripts finalizada")
