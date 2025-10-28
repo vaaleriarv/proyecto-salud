@@ -7,13 +7,11 @@ import sqlite3
 import zipfile
 import gzip
 import os
-from functools import reduce
 
 # --- Crear carpetas de data ---
 os.makedirs("data_xpt", exist_ok=True)
 os.makedirs("data_csv", exist_ok=True)
 
-# --- Conectar SQLite ---
 conn = sqlite3.connect("pipeline.db")
 
 # --- NHANES 2021 ---
@@ -82,7 +80,7 @@ try:
         with z.open(xpt_files[0]) as f:
             df_brfss = pd.read_sas(f, format="xport")
 
-            # Definir las columnas que te interesan
+            # Columnas relevantes a conservar
             columnas_relevantes = [
                 '_SEQNO' ,'_STATE', 'MARITAL', '_CHLDCNT', '_INCOMG1', '_AGE_G', '_SEX', '_RACE',
                 '_URBSTAT', '_METSTAT', '_EDUCAG', 'MEDCOST1', 'CHECKUP1', '_HLTHPL2',

@@ -68,7 +68,7 @@ try:
     )
     
     # Crear variables derivadas nutricionales
-    print("\n📊 Creando variables derivadas nutricionales...")
+    print("\nCreando variables derivadas nutricionales...")
     
     # Carbohidratos netos (importantes para diabetes)
     fdc_nutrientes['Carb_Netos'] = (
@@ -257,7 +257,7 @@ if fdc_nutrientes is not None and odepa_agregado is not None:
         print(f"   Matches con score >80: {(df_correspondencias['match_score'] > 80).sum()}")
         
         # Análisis de precios vs perfil nutricional
-        print("\n📊 ANÁLISIS: Precio vs Perfil Nutricional")
+        print("\n ANÁLISIS: Precio vs Perfil Nutricional")
         if 'clasificacion_salud' in odepa_fdc_integrado.columns:
             precio_por_salud = odepa_fdc_integrado.groupby('clasificacion_salud').agg({
                 'precio_promedio_clp': ['mean', 'median', 'count']
@@ -544,7 +544,7 @@ tablas_integradas = [
     'DATOS_ANALISIS_FINAL'
 ]
 
-print("\n📊 TABLAS INTEGRADAS CREADAS:")
+print("\n TABLAS INTEGRADAS CREADAS:")
 for tabla in tablas_integradas:
     try:
         count = cursor.execute(f"SELECT COUNT(*) FROM {tabla}").fetchone()[0]
@@ -556,7 +556,7 @@ print("\n" + "="*80)
 print(" INTEGRACIÓN COMPLETADA EXITOSAMENTE")
 print("="*80)
 
-print("\n📋 TABLAS PRINCIPALES PARA ANÁLISIS:")
+print("\n TABLAS PRINCIPALES PARA ANÁLISIS:")
 print("  1. DATOS_ANALISIS_FINAL - Dataset master NHANES completo")
 print("  2. ODEPA_FDC_INTEGRADO - Precios Chile + Nutrientes EE.UU.")
 print("  3. COMPARACION_DIABETES_* - Comparaciones NHANES vs BRFSS")

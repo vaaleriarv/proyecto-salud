@@ -213,9 +213,9 @@ try:
         df_ghb.loc[(df_ghb['LBXGH'] < 3) | (df_ghb['LBXGH'] > 18), 'LBXGH'] = np.nan
         
         nhanes_clean['GHB_L'] = df_ghb
-        print(f"  ✓ GHB_L: HbA1c limpiada (n={df_ghb['LBXGH'].notna().sum():,})")
+        print(f"   GHB_L: HbA1c limpiada (n={df_ghb['LBXGH'].notna().sum():,})")
     else:
-        print("  ⚠ LBXGH no encontrada en GHB_L")
+        print("   LBXGH no encontrada en GHB_L")
         
 except Exception as e:
     print(f"  ✗ Error en GHB_L: {e}")
@@ -233,12 +233,12 @@ try:
         df_glu.loc[(df_glu['LBXGLU'] < 40) | (df_glu['LBXGLU'] > 600), 'LBXGLU'] = np.nan
         
         nhanes_clean['GLU_L'] = df_glu
-        print(f"  ✓ GLU_L: Glucosa limpiada (n={df_glu['LBXGLU'].notna().sum():,})")
+        print(f"   GLU_L: Glucosa limpiada (n={df_glu['LBXGLU'].notna().sum():,})")
     else:
-        print("  ⚠ LBXGLU no encontrada en GLU_L")
+        print("   LBXGLU no encontrada en GLU_L")
         
 except Exception as e:
-    print(f"  ✗ Error en GLU_L: {e}")
+    print(f"   Error en GLU_L: {e}")
 
 # ----------------------------------------
 # 2.5 TCHOL_L - Colesterol Total
@@ -253,12 +253,12 @@ try:
         df_tchol.loc[(df_tchol['LBXTC'] < 100) | (df_tchol['LBXTC'] > 500), 'LBXTC'] = np.nan
         
         nhanes_clean['TCHOL_L'] = df_tchol
-        print(f"  ✓ TCHOL_L: Colesterol total limpiado (n={df_tchol['LBXTC'].notna().sum():,})")
+        print(f"   TCHOL_L: Colesterol total limpiado (n={df_tchol['LBXTC'].notna().sum():,})")
     else:
-        print("  ⚠ LBXTC no encontrada en TCHOL_L")
+        print("   LBXTC no encontrada en TCHOL_L")
         
 except Exception as e:
-    print(f"  ✗ Error en TCHOL_L: {e}")
+    print(f"   Error en TCHOL_L: {e}")
 
 # ----------------------------------------
 # 2.6 HDL_L - Colesterol HDL (Bueno)
@@ -273,12 +273,12 @@ try:
         df_hdl.loc[(df_hdl['LBDHDD'] < 10) | (df_hdl['LBDHDD'] > 150), 'LBDHDD'] = np.nan
         
         nhanes_clean['HDL_L'] = df_hdl
-        print(f"  ✓ HDL_L: HDL limpiado (n={df_hdl['LBDHDD'].notna().sum():,})")
+        print(f"  HDL_L: HDL limpiado (n={df_hdl['LBDHDD'].notna().sum():,})")
     else:
-        print("  ⚠ LBDHDD no encontrada en HDL_L")
-        
+        print("  LBDHDD no encontrada en HDL_L")
+    
 except Exception as e:
-    print(f"  ✗ Error en HDL_L: {e}")
+    print(f"  Error en HDL_L: {e}")
 
 # ----------------------------------------
 # 2.7 TRIGLY_L - Triglicéridos
@@ -299,12 +299,12 @@ try:
         df_trigly.loc[(df_trigly['LBDTRSI'] < 30) | (df_trigly['LBDTRSI'] > 1000), 'LBDTRSI'] = np.nan
         
         nhanes_clean['TRIGLY_L'] = df_trigly
-        print(f"  ✓ TRIGLY_L: Triglicéridos limpiados (n={df_trigly['LBDTRSI'].notna().sum():,})")
+        print(f"   TRIGLY_L: Triglicéridos limpiados (n={df_trigly['LBDTRSI'].notna().sum():,})")
     else:
-        print("  ⚠ LBXTR/LBDTRSI no encontrada en TRIGLY_L")
+        print("   LBXTR/LBDTRSI no encontrada en TRIGLY_L")
         
 except Exception as e:
-    print(f"  ✗ Error en TRIGLY_L: {e}")
+    print(f"  Error en TRIGLY_L: {e}")
 
 # ----------------------------------------
 # 2.8 DR1TOT_L y DR2TOT_L - Dieta
@@ -332,10 +332,10 @@ for tbl_name, dia in [("DR1TOT_L", "día 1"), ("DR2TOT_L", "día 2")]:
                 df_diet[var] = pd.to_numeric(df_diet[var], errors='coerce')
         
         nhanes_clean[tbl_name] = df_diet
-        print(f"  ✓ {tbl_name}: Variables dietéticas limpiadas ({dia})")
+        print(f"   {tbl_name}: Variables dietéticas limpiadas ({dia})")
         
     except Exception as e:
-        print(f"  ✗ Error en {tbl_name}: {e}")
+        print(f"   Error en {tbl_name}: {e}")
 
 # ----------------------------------------
 # 2.9 Otras tablas de laboratorio
@@ -455,7 +455,7 @@ print("\n4.2. Variables antropométricas...")
 # Calcular IMC si no existe
 if 'BMXBMI' not in nhanes_master.columns and 'BMXWT' in nhanes_master.columns and 'BMXHT' in nhanes_master.columns:
     nhanes_master['BMXBMI'] = nhanes_master['BMXWT'] / ((nhanes_master['BMXHT'] / 100) ** 2)
-    print("  ✓ BMXBMI calculado")
+    print(" BMXBMI calculado")
 
 # Categoría de IMC
 if 'BMXBMI' in nhanes_master.columns:
@@ -472,7 +472,7 @@ if 'BMXBMI' in nhanes_master.columns:
             return 'Obesidad'
     
     nhanes_master['categoria_imc'] = nhanes_master['BMXBMI'].apply(clasificar_imc)
-    print("  ✓ categoria_imc creada")
+    print(" categoria_imc creada")
 
 # Ratio cintura/cadera (importante para riesgo metabólico)
 if 'BMXWAIST' in nhanes_master.columns and 'BMXHIP' in nhanes_master.columns:
@@ -494,10 +494,10 @@ if 'BMXWAIST' in nhanes_master.columns and 'BMXHIP' in nhanes_master.columns:
             return np.nan
     
     nhanes_master['riesgo_rcc'] = nhanes_master.apply(clasificar_rcc, axis=1)
-    print("  ✓ ratio_cintura_cadera y riesgo_rcc creados")
+    print(" ratio_cintura_cadera y riesgo_rcc creados")
 
 # ----------------------------------------
-# 4.3 DIABETES - Variable crítica
+# 4.3 DIABETES 
 # ----------------------------------------
 print("\n4.3. Variables de diabetes...")
 
@@ -521,7 +521,7 @@ if 'LBXGH' in nhanes_master.columns:
     
     count_diabetes = nhanes_master['diabetes_hba1c'].sum()
     total = nhanes_master['diabetes_hba1c'].notna().sum()
-    print(f"  ✓ diabetes_hba1c creada: {count_diabetes:.0f} casos de {total:,} ({count_diabetes/total*100:.1f}%)")
+    print(f"diabetes_hba1c creada: {count_diabetes:.0f} casos de {total:,} ({count_diabetes/total*100:.1f}%)")
 
 # Diagnóstico de diabetes por glucosa en ayunas
 if 'LBXGLU' in nhanes_master.columns:
@@ -540,9 +540,9 @@ if 'LBXGLU' in nhanes_master.columns:
             return 'Diabetes'
     
     nhanes_master['categoria_glucosa'] = nhanes_master['LBXGLU'].apply(clasificar_glucosa)
-    print("  ✓ diabetes_glucosa y categoria_glucosa creadas")
+    print(" diabetes_glucosa y categoria_glucosa creadas")
 
-# DIABETES COMBINADA (criterio más estricto)
+# DIABETES COMBINADA
 if 'diabetes_hba1c' in nhanes_master.columns or 'diabetes_glucosa' in nhanes_master.columns:
     nhanes_master['tiene_diabetes'] = 0
     
@@ -552,7 +552,6 @@ if 'diabetes_hba1c' in nhanes_master.columns or 'diabetes_glucosa' in nhanes_mas
     if 'diabetes_glucosa' in nhanes_master.columns:
         nhanes_master.loc[nhanes_master['diabetes_glucosa'] == 1, 'tiene_diabetes'] = 1
     
-    # Marcar como NaN si no hay datos de ninguno
     mask_sin_datos = True
     if 'diabetes_hba1c' in nhanes_master.columns:
         mask_sin_datos = mask_sin_datos & nhanes_master['diabetes_hba1c'].isna()
@@ -657,9 +656,9 @@ if var_trig:
             return 'Muy alto'
     
     nhanes_master['categoria_trigliceridos'] = nhanes_master[var_trig].apply(clasificar_trigliceridos)
-    print("  ✓ trigliceridos_altos y categoria_trigliceridos creadas")
+    print("trigliceridos_altos y categoria_trigliceridos creadas")
 
-# LDL calculado (fórmula de Friedewald)
+# LDL calculado
 if 'LBXTC' in nhanes_master.columns and 'LBDHDD' in nhanes_master.columns and var_trig:
     # LDL = Colesterol Total - HDL - (Triglicéridos / 5)
     # Solo válido si triglicéridos < 400 mg/dL
@@ -690,7 +689,7 @@ if 'LBXTC' in nhanes_master.columns and 'LBDHDD' in nhanes_master.columns and va
     nhanes_master['categoria_ldl'] = nhanes_master['LBDLDL_calc'].apply(clasificar_ldl)
     
     count_ldl = nhanes_master['LBDLDL_calc'].notna().sum()
-    print(f"  ✓ LBDLDL_calc (LDL calculado): {count_ldl:,} valores")
+    print(f"LBDLDL_calc (LDL calculado): {count_ldl:,} valores")
 
 # ----------------------------------------
 # 4.5 SÍNDROME METABÓLICO (Criterios ATP III)
@@ -957,7 +956,7 @@ print("="*70)
 
 # Reporte de diabetes
 if 'tiene_diabetes' in nhanes_master.columns:
-    print("\n📊 REPORTE: DIABETES")
+    print("\n REPORTE: DIABETES")
     print("-" * 50)
     
     total = nhanes_master['tiene_diabetes'].notna().sum()
@@ -1000,7 +999,7 @@ if 'tiene_diabetes' in nhanes_master.columns:
 
 # Reporte de colesterol
 if 'colesterol_alto' in nhanes_master.columns:
-    print("\n📊 REPORTE: COLESTEROL")
+    print("\n REPORTE: COLESTEROL")
     print("-" * 50)
     
     total = nhanes_master['colesterol_alto'].notna().sum()
@@ -1019,7 +1018,7 @@ if 'colesterol_alto' in nhanes_master.columns:
 
 # Reporte de síndrome metabólico
 if 'sindrome_metabolico' in nhanes_master.columns:
-    print("\n📊 REPORTE: SÍNDROME METABÓLICO")
+    print("\n REPORTE: SÍNDROME METABÓLICO")
     print("-" * 50)
     
     total = len(nhanes_master)
@@ -1037,7 +1036,7 @@ if 'sindrome_metabolico' in nhanes_master.columns:
 
 # Reporte de riesgo cardiovascular
 if 'categoria_riesgo_cv' in nhanes_master.columns:
-    print("\n📊 REPORTE: RIESGO CARDIOVASCULAR")
+    print("\nREPORTE: RIESGO CARDIOVASCULAR")
     print("-" * 50)
     
     print("Distribución por categoría de riesgo:")
@@ -1051,7 +1050,7 @@ if 'categoria_riesgo_cv' in nhanes_master.columns:
 
 # Reporte de variables dietéticas
 if 'promedio_tkcal' in nhanes_master.columns:
-    print("\n📊 REPORTE: INGESTA DIETÉTICA")
+    print("\n REPORTE: INGESTA DIETÉTICA")
     print("-" * 50)
     
     vars_dieta_reporte = {
@@ -1074,7 +1073,7 @@ if 'promedio_tkcal' in nhanes_master.columns:
             print(f"  {nombre}: Media={media:.1f}, Mediana={mediana:.1f}")
 
 # Resumen de completitud de variables clave
-print("\n📊 COMPLETITUD DE VARIABLES CLAVE")
+print("\n COMPLETITUD DE VARIABLES CLAVE")
 print("-" * 50)
 
 vars_clave = [
@@ -1093,7 +1092,7 @@ for var in vars_clave:
 # FINALIZACIÓN
 # ========================================
 print(f"\n{'='*70}")
-print("✅ LIMPIEZA Y TRANSFORMACIÓN COMPLETADA")
+print(" LIMPIEZA Y TRANSFORMACIÓN COMPLETADA")
 print("="*70)
 print(f"\nTabla principal: NHANES_MASTER")
 print(f"Participantes: {nhanes_master.shape[0]:,}")

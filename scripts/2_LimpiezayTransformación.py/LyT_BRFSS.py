@@ -24,9 +24,9 @@ def mapear_columna(df, col, mapa, reemplazar_nones=True):
         if reemplazar_nones:
             df[col] = df[col].replace(['No sabe / No respondió', 'None'], np.nan)
         despues = df[col].notna().sum()
-        print(f"✓ Procesando '{col}': {antes:,} → {despues:,} valores válidos")
+        print(f" Procesando '{col}': {antes:,} → {despues:,} valores válidos")
     else:
-        print(f"⚠ Columna '{col}' no encontrada")
+        print(f" Columna '{col}' no encontrada")
 
 # ========================================
 # LIMPIEZA INICIAL
@@ -42,12 +42,12 @@ cols_to_drop = col_nan_pct[col_nan_pct > threshold_brfss].index.tolist()
 
 brfss_limpio = df.drop(columns=cols_to_drop)
 
-print(f"\n📊 Dimensiones originales: {df.shape[0]:,} filas x {df.shape[1]} columnas")
-print(f"🗑️  Columnas eliminadas (>75% NaN): {len(cols_to_drop)}")
-print(f"✅ Dimensiones después de eliminar columnas: {brfss_limpio.shape[0]:,} filas x {brfss_limpio.shape[1]} columnas")
+print(f"\n Dimensiones originales: {df.shape[0]:,} filas x {df.shape[1]} columnas")
+print(f"  Columnas eliminadas (>75% NaN): {len(cols_to_drop)}")
+print(f" Dimensiones después de eliminar columnas: {brfss_limpio.shape[0]:,} filas x {brfss_limpio.shape[1]} columnas")
 
 # Eliminar valores inválidos
-print("\n🧹 Eliminando valores inválidos...")
+print("\n Eliminando valores inválidos...")
 valores_invalidos = [-9, 77, 99, 'NA', 'N/A', ' ', '']
 brfss_limpio = brfss_limpio.replace(valores_invalidos, np.nan)
 
@@ -55,7 +55,7 @@ brfss_limpio = brfss_limpio.replace(valores_invalidos, np.nan)
 original_count = len(brfss_limpio)
 brfss_limpio = brfss_limpio.dropna(how='all')
 eliminados = original_count - len(brfss_limpio)
-print(f"🗑️  Filas eliminadas (completamente vacías): {eliminados:,}")
+print(f"  Filas eliminadas (completamente vacías): {eliminados:,}")
 
 # ========================================
 # PASO 2: MAPEO DE VARIABLES DEMOGRÁFICAS
@@ -207,7 +207,7 @@ if 'DRNK3GE5' in brfss_limpio.columns:
 # BEBIDAS AZUCARADAS
 if 'SSBFRUT3' in brfss_limpio.columns:
     brfss_limpio['SSBFRUT3'] = pd.to_numeric(brfss_limpio['SSBFRUT3'], errors='coerce')
-    print(f"✓ Procesando 'SSBFRUT3': consumo de bebidas azucaradas")
+    print(f" Procesando 'SSBFRUT3': consumo de bebidas azucaradas")
 
 # ========================================
 # PASO 5: VALIDACIÓN Y LIMPIEZA DE IMC
@@ -225,7 +225,7 @@ if '_BMI5' in brfss_limpio.columns:
     
     # Validar rango razonable (10-80)
     inconsistentes = brfss_limpio[(brfss_limpio['IMC_REAL'] < 10) | (brfss_limpio['IMC_REAL'] > 80)]
-    print(f"⚠️  Registros con IMC fuera de rango (10-80): {len(inconsistentes):,}")
+    print(f"  Registros con IMC fuera de rango (10-80): {len(inconsistentes):,}")
     
     if len(inconsistentes) > 0:
         brfss_limpio.loc[(brfss_limpio['IMC_REAL'] < 10) | (brfss_limpio['IMC_REAL'] > 80), 'IMC_REAL'] = np.nan
@@ -245,7 +245,7 @@ if '_BMI5' in brfss_limpio.columns:
     
     n_outliers = brfss_limpio['es_outlier_imc'].sum()
     pct_outliers = (n_outliers / len(brfss_limpio)) * 100
-    print(f"📊 Outliers detectados: {n_outliers:,} ({pct_outliers:.2f}%)")
+    print(f" Outliers detectados: {n_outliers:,} ({pct_outliers:.2f}%)")
     print(f"   Rango normal: {lower_bound:.1f} - {upper_bound:.1f}")
     
     # Categorización del IMC
@@ -263,7 +263,7 @@ if '_BMI5' in brfss_limpio.columns:
     
     brfss_limpio['categoria_IMC'] = brfss_limpio['IMC_REAL'].apply(clasificar_imc)
     
-    print("\n📊 Distribución por categoría de IMC:")
+    print("\n Distribución por categoría de IMC:")
     print(brfss_limpio['categoria_IMC'].value_counts().sort_index())
 
 # ========================================
@@ -340,7 +340,7 @@ def evaluar_estilo_vida(row):
     return 1 if saludable else 0
 
 brfss_limpio['estilo_vida_saludable'] = brfss_limpio.apply(evaluar_estilo_vida, axis=1)
-print(f"✓ Variable 'estilo_vida_saludable' creada")
+print(f" Variable 'estilo_vida_saludable' creada")
 
 # 4. SCORE SOCIOECONÓMICO
 def calcular_ses(row):
@@ -366,7 +366,7 @@ def calcular_ses(row):
     return max(0, score)
 
 brfss_limpio['ses_score'] = brfss_limpio.apply(calcular_ses, axis=1)
-print(f"✓ Variable 'ses_score' creada")
+print(f" Variable 'ses_score' creada")
 
 # ========================================
 # PASO 7: REPORTES Y ESTADÍSTICAS
@@ -375,13 +375,13 @@ print("\n" + "="*60)
 print("PASO 7: ESTADÍSTICAS FINALES")
 print("="*60)
 
-print(f"\n📊 Dimensiones finales: {brfss_limpio.shape[0]:,} filas x {brfss_limpio.shape[1]} columnas")
+print(f"\n Dimensiones finales: {brfss_limpio.shape[0]:,} filas x {brfss_limpio.shape[1]} columnas")
 completitud = (1 - brfss_limpio.isnull().sum().sum() / (brfss_limpio.shape[0] * brfss_limpio.shape[1])) * 100
-print(f"📊 Completitud global: {completitud:.2f}%")
+print(f" Completitud global: {completitud:.2f}%")
 
 # Estadísticas de IMC
 if 'IMC_REAL' in brfss_limpio.columns:
-    print("\n📊 ESTADÍSTICAS DE IMC:")
+    print("\n ESTADÍSTICAS DE IMC:")
     print(f"  Media: {brfss_limpio['IMC_REAL'].mean():.2f}")
     print(f"  Mediana: {brfss_limpio['IMC_REAL'].median():.2f}")
     print(f"  Desviación estándar: {brfss_limpio['IMC_REAL'].std():.2f}")
@@ -400,14 +400,14 @@ if 'tiene_diabetes' in brfss_limpio.columns:
     con_diabetes = (brfss_limpio['tiene_diabetes'] == 1).sum()
     prevalencia = (con_diabetes / total) * 100 if total > 0 else 0
     
-    print(f"\n🎯 PREVALENCIA GENERAL:")
+    print(f"\n PREVALENCIA GENERAL:")
     print(f"  Total casos con diabetes: {con_diabetes:,}")
     print(f"  Total casos válidos: {total:,}")
     print(f"  Prevalencia: {prevalencia:.2f}%")
     
     # Por edad
     if '_AGE_G' in brfss_limpio.columns:
-        print(f"\n📊 DIABETES POR GRUPO DE EDAD:")
+        print(f"\n DIABETES POR GRUPO DE EDAD:")
         diabetes_edad = brfss_limpio.groupby('_AGE_G')['tiene_diabetes'].agg([
             ('Total', 'count'),
             ('Con_Diabetes', 'sum'),
@@ -417,7 +417,7 @@ if 'tiene_diabetes' in brfss_limpio.columns:
     
     # Por IMC
     if 'categoria_IMC' in brfss_limpio.columns:
-        print(f"\n📊 DIABETES POR CATEGORÍA DE IMC:")
+        print(f"\n DIABETES POR CATEGORÍA DE IMC:")
         diabetes_imc = brfss_limpio.groupby('categoria_IMC')['tiene_diabetes'].agg([
             ('Total', 'count'),
             ('Con_Diabetes', 'sum'),
@@ -427,7 +427,7 @@ if 'tiene_diabetes' in brfss_limpio.columns:
     
     # Por nivel socioeconómico
     if 'ses_score' in brfss_limpio.columns:
-        print(f"\n📊 DIABETES POR NIVEL SOCIOECONÓMICO:")
+        print(f"\n DIABETES POR NIVEL SOCIOECONÓMICO:")
         diabetes_ses = brfss_limpio.groupby('ses_score')['tiene_diabetes'].agg([
             ('Total', 'count'),
             ('Con_Diabetes', 'sum'),
@@ -437,7 +437,7 @@ if 'tiene_diabetes' in brfss_limpio.columns:
     
     # Por estilo de vida
     if 'estilo_vida_saludable' in brfss_limpio.columns:
-        print(f"\n📊 DIABETES POR ESTILO DE VIDA:")
+        print(f"\n DIABETES POR ESTILO DE VIDA:")
         diabetes_estilo = brfss_limpio.groupby('estilo_vida_saludable')['tiene_diabetes'].agg([
             ('Total', 'count'),
             ('Con_Diabetes', 'sum'),
@@ -472,7 +472,7 @@ print("="*60)
 
 # Guardar tabla limpia con el nombre correcto
 brfss_limpio.to_sql("BRFSS_2024_LIMPIO", conn, if_exists="replace", index=False)
-print(f"✅ Tabla 'BRFSS_2024_LIMPIO' guardada exitosamente")
+print(f" Tabla 'BRFSS_2024_LIMPIO' guardada exitosamente")
 
 # Crear índices para consultas rápidas
 print("\n🔧 Creando índices para optimizar consultas...")
@@ -496,16 +496,16 @@ conn.commit()
 conn.close()
 
 print("\n" + "="*60)
-print("✅ LIMPIEZA COMPLETADA EXITOSAMENTE")
+print(" LIMPIEZA COMPLETADA EXITOSAMENTE")
 print("="*60)
-print(f"\n📁 Tabla guardada: BRFSS_2024_LIMPIO")
-print(f"📊 Registros finales: {brfss_limpio.shape[0]:,}")
-print(f"📊 Columnas finales: {brfss_limpio.shape[1]}")
-print(f"📊 Variables derivadas creadas: 6")
+print(f"\n Tabla guardada: BRFSS_2024_LIMPIO")
+print(f" Registros finales: {brfss_limpio.shape[0]:,}")
+print(f" Columnas finales: {brfss_limpio.shape[1]}")
+print(f" Variables derivadas creadas: 6")
 print(f"   - tiene_diabetes")
 print(f"   - riesgo_metabolico")
 print(f"   - categoria_riesgo")
 print(f"   - estilo_vida_saludable")
 print(f"   - ses_score")
 print(f"   - categoria_IMC")
-print("\n🎉 ¡Listo para análisis!")
+print("\n ¡Listo para análisis!")
